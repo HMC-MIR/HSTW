@@ -22,11 +22,11 @@ def align_batch(system, querylist, featdir1, featdir2, outdir, n_cores=8, downsa
         weights = np.array([2,3,3])
         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose)
         
-#     elif system==2:
-#         # Baseline 2: DTW with transitions (1,1), (1,2), (2,1) and weights 1, 1, 1
-#         steps = np.array([1,1,1,2,2,1]).reshape((-1,2))
-#         weights = np.array([1,1,1])
-#         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose)
+    elif system==2:
+        # Baseline 2: DTW with transitions (1,1), (1,2), (2,1) and weights 1, 1, 1
+        steps = np.array([1,1,1,2,2,1]).reshape((-1,2))
+        weights = np.array([1,1,1])
+        inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose)
         
 #     elif system==3:
 #         # Baseline 3: DTW with transitions (1,1), (1,0), (0,1) and weights 2, 1, 1
@@ -46,13 +46,13 @@ def align_batch(system, querylist, featdir1, featdir2, outdir, n_cores=8, downsa
 #         weights = np.array([1,1,2])
 #         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose, subseq=True)
         
-#     elif system==6:
-#         # Baseline 6: NWTW
+    elif system==6:
+        # Baseline 6: NWTW
 #         gamma = 0.346
-#         inputs = alignNW_batch(querylist, featdir1, featdir2, outdir, n_cores, downsample, gamma)
+        inputs = alignNW_batch(querylist, featdir1, featdir2, outdir, n_cores, downsample, gamma)
         
     else:
-        logging.error('Unrecognized baseline ID (should be between 1 and 7) %s' % system)
+        logging.error('Unrecognized baseline ID %s' % system)
         sys.exit(1)
         
     return
@@ -241,103 +241,103 @@ def backtrace(D, B, steps):
     return path
 
 
-# @numba.jit(nopython=True, cache=True)
-# def NWTW(C, gamma):
-#     '''
-#     Needleman-Wunsch time warping algorithm
+@numba.jit(nopython=True, cache=True)
+def NWTW(C, gamma):
+    '''
+    Needleman-Wunsch time warping algorithm
     
-#     Arguments:
-#     C -- cost matrix
-#     gamma -- gap penalty
-#     '''
-#     NW = np.zeros(C.shape)
-#     B = np.zeros(C.shape, dtype=np.int8) # backtrace matrix
+    Arguments:
+    C -- cost matrix
+    gamma -- gap penalty
+    '''
+    NW = np.zeros(C.shape)
+    B = np.zeros(C.shape, dtype=np.int8) # backtrace matrix
     
-#     # initialization
-#     for j in range(1, C.shape[1]):
-#         NW[0, j] = gamma + NW[0, j-1]
-#         B[0, j] = 5
-#     for i in range(1, C.shape[0]):
-#         NW[i, 0] = gamma + NW[i-1, 0]
-#         B[i, 0] = 4
+    # initialization
+    for j in range(1, C.shape[1]):
+        NW[0, j] = gamma + NW[0, j-1]
+        B[0, j] = 5
+    for i in range(1, C.shape[0]):
+        NW[i, 0] = gamma + NW[i-1, 0]
+        B[i, 0] = 4
         
-#     # dynamic programming
-#     for i in range(1, C.shape[0]):
-#         for j in range(1, C.shape[1]):
-#             cost_1 = C[i, j] + NW[i-1, j-1]
-#             cost_2 = C[i, j] + C[i, j-1] + NW[i-1, j-2]
-#             cost_3 = C[i, j] + C[i-1, j] + NW[i-2, j-1]
-#             cost_4 = gamma + NW[i-1, j]
-#             cost_5 = gamma + NW[i, j-1]
-#             costs = np.array([cost_1, cost_2, cost_3, cost_4, cost_5])
-#             NW[i, j] = np.min(costs)
-#             B[i, j] = np.argmin(costs) + 1
+    # dynamic programming
+    for i in range(1, C.shape[0]):
+        for j in range(1, C.shape[1]):
+            cost_1 = C[i, j] + NW[i-1, j-1]
+            cost_2 = C[i, j] + C[i, j-1] + NW[i-1, j-2]
+            cost_3 = C[i, j] + C[i-1, j] + NW[i-2, j-1]
+            cost_4 = gamma + NW[i-1, j]
+            cost_5 = gamma + NW[i, j-1]
+            costs = np.array([cost_1, cost_2, cost_3, cost_4, cost_5])
+            NW[i, j] = np.min(costs)
+            B[i, j] = np.argmin(costs) + 1
             
-#     # return cost and path (from backtrace function)
-#     optcost = NW[-1, -1]
-#     path = backtrace_nwtw(NW, B)
-#     path.reverse()
-#     return optcost, np.array(path)
+    # return cost and path (from backtrace function)
+    optcost = NW[-1, -1]
+    path = backtrace_nwtw(NW, B)
+    path.reverse()
+    return optcost, np.array(path)
 
 
 
-# @numba.jit(nopython=True, cache=True)
-# def backtrace_nwtw(NW, B):
-#     '''
-#     backtrace function for NWTW
-#     '''
-#     # initialization
-#     r = B.shape[0] - 1
-#     c = B.shape[1] - 1
-#     path = [[r, c]]
-#     steps = {1: (1, 1), 2: (1, 2), 3: (2, 1), 4: (1, 0), 5: (0, 1)}
+@numba.jit(nopython=True, cache=True)
+def backtrace_nwtw(NW, B):
+    '''
+    backtrace function for NWTW
+    '''
+    # initialization
+    r = B.shape[0] - 1
+    c = B.shape[1] - 1
+    path = [[r, c]]
+    steps = {1: (1, 1), 2: (1, 2), 3: (2, 1), 4: (1, 0), 5: (0, 1)}
     
-#     # backtrace
-#     while r > 0:
-#         step = steps[B[r, c]]
-#         r = r - step[0]
-#         c = c - step[1]
-#         if r != B.shape[0] - 1:
-#             path.append([r, c])
+    # backtrace
+    while r > 0:
+        step = steps[B[r, c]]
+        r = r - step[0]
+        c = c - step[1]
+        if r != B.shape[0] - 1:
+            path.append([r, c])
             
-#     return path
+    return path
 
 
 
-# def alignNW_batch(querylist, featdir1, featdir2, outdir, n_cores, downsample, gamma):
-#     start = time.time()
-#     outdir.mkdir(parents=True, exist_ok=True)
+def alignNW_batch(querylist, featdir1, featdir2, outdir, n_cores, downsample, gamma):
+    start = time.time()
+    outdir.mkdir(parents=True, exist_ok=True)
     
-#     # prep inputs for parallelization
-#     inputs = []
-#     with open(querylist, 'r') as f:
-#         for line in f:
-#             parts = line.strip().split(' ')
-#             assert len(parts) == 2
-#             featfile1 = (featdir1 / parts[0]).with_suffix('.npy')
-#             featfile2 = (featdir2 / parts[1]).with_suffix('.npy')
-#             queryid = os.path.basename(parts[0]) + '__' + os.path.basename(parts[1])
-#             outfile = (outdir / queryid).with_suffix('.pkl')
+    # prep inputs for parallelization
+    inputs = []
+    with open(querylist, 'r') as f:
+        for line in f:
+            parts = line.strip().split(' ')
+            assert len(parts) == 2
+            featfile1 = (featdir1 / parts[0]).with_suffix('.npy')
+            featfile2 = (featdir2 / parts[1]).with_suffix('.npy')
+            queryid = os.path.basename(parts[0]) + '__' + os.path.basename(parts[1])
+            outfile = (outdir / queryid).with_suffix('.pkl')
             
-#             if os.path.exists(outfile):
-#                 print(f"Skipping {outfile}")
-#             else:
-#                 inputs.append((featfile1, featfile2, downsample, gamma, outfile))
+            if os.path.exists(outfile):
+                print(f"Skipping {outfile}")
+            else:
+                inputs.append((featfile1, featfile2, downsample, gamma, outfile))
     
-#     # process files in parallel
-#     with multiprocessing.get_context("spawn").Pool(processes = n_cores) as pool:
-#         pool.starmap(alignNW, inputs)
-#     print("Time to finish align with NWTW: ", time.time() - start)
-#     return
+    # process files in parallel
+    with multiprocessing.get_context("spawn").Pool(processes = n_cores) as pool:
+        pool.starmap(alignNW, inputs)
+    print("Time to finish align with NWTW: ", time.time() - start)
+    return
 
 
 
-# @numba.jit(forceobj=True)
-# def alignNW(featfile1, featfile2, downsample, gamma, outfile=None):
-#     '''Aligns featfile1 and featfile2 using NWTW'''
-#     # Read in chroma features from feature files
-#     F1 = np.load(featfile1)  # 12 x N
-#     F2 = np.load(featfile2)  # 12 x M
+@numba.jit(forceobj=True)
+def alignNW(featfile1, featfile2, downsample, gamma, outfile=None):
+    '''Aligns featfile1 and featfile2 using NWTW'''
+    # Read in chroma features from feature files
+    F1 = np.load(featfile1)  # 12 x N
+    F2 = np.load(featfile2)  # 12 x M
 
 #     # Make sure there is a valid path possible. If one file is over twice as long as the other one, 
 #     # then no valid path is possible (assuming our steps only let us move a max of 2 spaces)
@@ -346,16 +346,20 @@ def backtrace(D, B, steps):
 #             pickle.dump(None, open(outfile, 'wb'))
 #         return None
     
-#     C = 1 - F1[:,0::downsample].T @ F2[:,0::downsample] # cos distance metric
+    C = 1 - F1[:,0::downsample].T @ F2[:,0::downsample] # cos distance metric
     
-#     # Run NWTW algorithm
-#     optcost, wp = NWTW(C, gamma)
+    # Run NWTW algorithm
+    optcost, wp = NWTW(C, gamma)
     
-#     # If output file is specified, save results
-#     if outfile:
-#         pickle.dump(wp, open(outfile, 'wb'))
+    # If output file is specified, save results
+    if outfile:
+        costs = []
+        for element in wp:
+            costs.append(C[element[0], element[1]])
+        d = {"wp": wp, "costs": costs}
+        pickle.dump(d, open(outfile, 'wb'))
     
-#     return wp
+    return wp
 
 
 # def align_HPTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, gamma, beta, downsample):
