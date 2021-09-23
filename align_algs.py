@@ -28,25 +28,7 @@ def align_batch(system, querylist, featdir1, featdir2, outdir, n_cores=8, downsa
         weights = np.array([1,1,1])
         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose)
         
-#     elif system==3:
-#         # Baseline 3: DTW with transitions (1,1), (1,0), (0,1) and weights 2, 1, 1
-#         steps = np.array([1,1,1,0,0,1]).reshape((-1,2))
-#         weights = np.array([2,1,1])
-#         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose)
-        
-#     elif system==4:
-#         # Baseline 4: DTW with transitions (1,1), (1,0), (0,1) and weights 1, 1, 1
-#         steps = np.array([1,1,1,0,0,1]).reshape((-1,2))
-#         weights = np.array([1,1,1])
-#         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose)
-        
-#     elif system==5:
-#         # Baseline 5: Subsequence DTW with (query, reference) transitions (1,1), (1,2), (2,1) and weights 1, 1, 2
-#         steps = np.array([1,1,1,2,2,1]).reshape((-1,2))
-#         weights = np.array([1,1,2])
-#         inputs = alignDTW_batch(querylist, featdir1, featdir2, outdir, n_cores, steps, weights, downsample, verbose, subseq=True)
-        
-    elif system==6:
+    elif system==3:
         # Baseline 6: NWTW
         gamma = 0.8
         inputs = alignNW_batch(querylist, featdir1, featdir2, outdir, n_cores, downsample, gamma)
@@ -275,14 +257,15 @@ def NWTW(C, gamma):
             
     # return cost and path (from backtrace function)
     optcost = NW[-1, -1]
-    path = backtrace_nwtw(NW, B)
+    path, costs = backtrace_nwtw(NW, B)
     path.reverse()
-    return optcost, np.array(path)
+    costs.reverse()
+    return optcost, np.array(path), np.array(costs)
 
 
 
 @numba.jit(nopython=True, cache=True)
-def backtrace_nwtw(NW, B):
+def backtrace_nwtw(NW, B, C, gamma):
     '''
     backtrace function for NWTW
     '''
@@ -290,6 +273,7 @@ def backtrace_nwtw(NW, B):
     r = B.shape[0] - 1
     c = B.shape[1] - 1
     path = [[r, c]]
+    costs = [C[r,c]]
     steps = {1: (1, 1), 2: (1, 2), 3: (2, 1), 4: (1, 0), 5: (0, 1)}
     
     # backtrace
@@ -300,7 +284,12 @@ def backtrace_nwtw(NW, B):
         if r != B.shape[0] - 1:
             path.append([r, c])
             
-    return path
+            if step == 4 or step == 5:
+                costs.append(gamma)
+            else:
+                costs.append(C[r, c])
+            
+    return path, costs
 
 
 
@@ -349,13 +338,13 @@ def alignNW(featfile1, featfile2, downsample, gamma, outfile=None):
     C = 1 - F1[:,0::downsample].T @ F2[:,0::downsample] # cos distance metric
     
     # Run NWTW algorithm
-    optcost, wp = NWTW(C, gamma)
+    optcost, wp, costs = NWTW(C, gamma)
     
     # If output file is specified, save results
     if outfile:
-        costs = []
-        for element in wp:
-            costs.append(C[element[0], element[1]])
+#         costs = []
+#         for element in wp:
+#             costs.append(C[element[0], element[1]])
         d = {"wp": wp, "costs": costs}
         pickle.dump(d, open(outfile, 'wb'))
     
@@ -416,16 +405,18 @@ def align_HPTW(featfile1, featfile2, steps, weights, c_gamma, c_beta, downsample
         
     # Run HSTW
     D, B = HPTW(C, steps, weights, gamma, beta)
-    path_v, path_h = backtrace_HPTW(D, B, steps)
+    path_v, path_h, total_path, costs = backtrace_HPTW(D, B, steps, C, gamma)
         
     # If output file is specified, save results
     
     if outfile:
-        costs_v = []
-        for element in path_v:
-            costs_v.append(C[element[0], element[1]])
-        # don't care about hidden costs -- just uses gamma
-        d = {"wp": [path_v, path_h], "costs": costs_v}
+#         for element in total_path:
+#             if element[2] == 0:
+#                 costs.append(gamma)
+#             elif element[2] == 1:
+#                 costs.append(C[element[0], element[1]])
+                
+        d = {"wp": total_path, "path_v": path_v, "path_h": path_h, "costs": costs}
         pickle.dump(d, open(outfile, 'wb'))
 
     return path_v, path_h
@@ -495,7 +486,7 @@ def HPTW(C, steps, weights, gamma, beta):
     return D, B
 
 #@numba.jit(nopython=True, cache=True)
-def backtrace_HPTW(D, B, steps):
+def backtrace_HPTW(D, B, steps, C, gamma):
     # Hidden = 0, Visible = 1
     
     row = D.shape[1] - 1
@@ -507,14 +498,25 @@ def backtrace_HPTW(D, B, steps):
     
     path_v = []
     path_h = []
+    total_path = []
+    costs = []
+#     planes_v = []
+#     planes_h = []
+#     i = 0
     
     while row > 0 and col > 0:
         
         # Record row and column in path
         if plane == 0:
             path_h.append([row, col])
+            costs.append(gamma)
+#             planes_h.append(i)
         else:
             path_v.append([row, col])
+            costs.append(C[row, col])
+#             planes_v.append(i)
+        total_path.append([row, col, plane])
+#         i += 1
             
         # Backtrace
         
@@ -548,7 +550,12 @@ def backtrace_HPTW(D, B, steps):
                 
     if plane == 0:
         path_h.append([row, col])
+        costs.append(gamma)
+#         planes_h.append(i)
     else:
         path_v.append([row, col])
+        costs.append(C[row, col])
+#         planes_v.append(i)
+    total_path.append([row, col, plane])
                 
-    return np.flipud(path_v), np.flipud(path_h)
+    return np.flipud(path_v), np.flipud(path_h), np.flipud(total_path), np.flipud(costs)
