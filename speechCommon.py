@@ -3,6 +3,7 @@ import pickle
 import librosa
 from scipy.spatial.distance import cdist
 import python_speech_features
+from sklearn.metrics.pairwise import euclidean_distances
 
 sigma = np.array([[0, 1], [1, 0], [1, 1]])
 
@@ -18,19 +19,36 @@ dtw_weights = \
 #def getMFCC(query_id, time = None, piece_type='reference', edit_type='n1', mfcc_type='old', save=False):
 def getMFCC(query_id, time = None, piece_type='reference', edit_type='n1', mfcc_type='new', save=False):
     if piece_type =='reference':
-        file_dir = '../ttemp/TamperingDetection/speech/ref/{}.wav'.format(query_id.replace("_160", ""))
+        file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/ref/{}.wav'.format(query_id.replace("_160", ""))
     else:
-        file_dir = '../ttemp/TamperingDetection/speech/queries/160kbps/{}sec/{}_{}_{}.wav'.format(time, query_id, edit_type, bitrateKBPS)
+        file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/queries/160kbps/{}sec/{}_{}_{}.wav'.format(time, query_id, edit_type, bitrateKBPS)
     if mfcc_type == 'old':
         y, sr = librosa.load(file_dir, sr=22050)
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=12)
         return mfcc.T
-    y, sr = librosa.load(file_dir, sr=22050)
-    mfcc = python_speech_features.mfcc(y, sr, winstep = 512/sr, nfft = 2048)
+    y, sr = librosa.load(file_dir, sr=16000)
+    mfcc = python_speech_features.mfcc(y, sr, winstep = 0.01)
     delta_mfcc = python_speech_features.delta(mfcc, 2)
     delta_delta_mfcc = python_speech_features.delta(mfcc, 3)
     mfcc = np.hstack((np.hstack((mfcc, delta_mfcc)),delta_delta_mfcc))
     return mfcc
+
+
+def getPairwiseCostMatrix(queryFile, refFile):
+    query, sr = librosa.load(queryFile, sr=16000)
+    
+    mfcc_query = python_speech_features.mfcc(query, sr, winstep = 0.01)
+    delta_mfcc_query = python_speech_features.delta(mfcc_query, 2)
+    delta_delta_mfcc_query = python_speech_features.delta(mfcc_query, 3)
+    mfcc_query = np.hstack((np.hstack((mfcc_query, delta_mfcc_query)),delta_delta_mfcc_query))
+    
+    ref, sr = librosa.load(refFile, sr=16000)
+    mfcc_ref = python_speech_features.mfcc(ref, sr, nfft = 2048, winstep= 512 / sr)
+    delta_mfcc_ref = python_speech_features.delta(mfcc_ref, 2)
+    delta_delta_mfcc_ref = python_speech_features.delta(mfcc_ref, 3)
+    mfcc_ref = np.hstack((np.hstack((mfcc_ref, delta_mfcc_ref)),delta_delta_mfcc_ref))
+    
+    return euclidean_distances(mfcc_query, mfcc_ref)
 
 #From 03
 def cutMFCC(query_id, edit_type, piece):
