@@ -19,9 +19,9 @@ dtw_weights = \
 #def getMFCC(query_id, time = None, piece_type='reference', edit_type='n1', mfcc_type='old', save=False):
 def getMFCC(query_id, time = None, piece_type='reference', edit_type='n1', mfcc_type='new', save=False):
     if piece_type =='reference':
-        file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/ref/{}.wav'.format(query_id.replace("_160", ""))
+        file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/ref/wav/{}.wav'.format(query_id.replace("_160", ""))
     else:
-        file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/queries/160kbps/{}sec/{}_{}_{}.wav'.format(time, query_id, edit_type, bitrateKBPS)
+        file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/queries/wav/160kbps/{}sec/{}_{}_{}.wav'.format(time, query_id, edit_type, bitrateKBPS)
     if mfcc_type == 'old':
         y, sr = librosa.load(file_dir, sr=22050)
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=12)
@@ -75,7 +75,7 @@ def getGtPath(query_id, ref_feat_size, query_feat_size, edit_type='n', piece=1, 
                 break
     tstart = float(line.split(' ')[2])
     tend = float(line.split(' ')[3])
-    ref_len = librosa.get_duration(filename="{}/speech/ref/{}.wav".format(data_dir, query_id))
+    ref_len = librosa.get_duration(filename="{}/speech/ref/wav/{}.wav".format(data_dir, query_id))
     fstart = int(tstart / ref_len * ref_feat_size)
     fend = int(tend / ref_len * ref_feat_size)
     gt_path = []
