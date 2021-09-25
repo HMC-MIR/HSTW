@@ -23,7 +23,7 @@ def getMFCC(query_id, time = None, piece_type='reference', edit_type='n1', mfcc_
     else:
         file_dir = '/mnt/data0/agoutam/TamperingDetection/speech/queries/wav/160kbps/{}sec/{}_{}_{}.wav'.format(time, query_id, edit_type, bitrateKBPS)
     if mfcc_type == 'old':
-        y, sr = librosa.load(file_dir, sr=22050)
+        y, sr = librosa.load(file_dir, sr=16000)
         mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=12)
         return mfcc.T
     y, sr = librosa.load(file_dir, sr=16000)
