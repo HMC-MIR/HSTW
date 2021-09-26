@@ -43,7 +43,7 @@ def getPairwiseCostMatrix(queryFile, refFile):
     mfcc_query = np.hstack((np.hstack((mfcc_query, delta_mfcc_query)),delta_delta_mfcc_query))
     
     ref, sr = librosa.load(refFile, sr=16000)
-    mfcc_ref = python_speech_features.mfcc(ref, sr, nfft = 2048, winstep= 512 / sr)
+    mfcc_ref = python_speech_features.mfcc(ref, sr, winstep= 0.01)
     delta_mfcc_ref = python_speech_features.delta(mfcc_ref, 2)
     delta_delta_mfcc_ref = python_speech_features.delta(mfcc_ref, 3)
     mfcc_ref = np.hstack((np.hstack((mfcc_ref, delta_mfcc_ref)),delta_delta_mfcc_ref))
