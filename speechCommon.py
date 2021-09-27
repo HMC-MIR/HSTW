@@ -33,6 +33,20 @@ def getMFCC(query_id, time = None, piece_type='reference', edit_type='n1', mfcc_
     mfcc = np.hstack((np.hstack((mfcc, delta_mfcc)),delta_delta_mfcc))
     return mfcc
 
+def readMFCC(base_dir, query_id, piece_type='reference', edit_type='n1', editTimeSec = 2):
+    
+    mfcc = None
+    filename = None
+    if(piece_type == 'queries'):
+        filename = "{}/speech/queries/mfcc/160kbps/{}sec/{}_{}_160.pkl".format(base_dir, editTimeSec, query_id, edit_type)
+    elif(piece_type == 'reference'):
+        filename = "{}/speech/ref/mfcc/{}.pkl".format(base_dir,query_id)
+        
+    with open(filename, 'rb') as f:
+        mfcc = pickle.load(f)
+    f.close()
+        
+    return mfcc
 
 def getPairwiseCostMatrix(queryFile, refFile):
     query, sr = librosa.load(queryFile, sr=16000)
