@@ -257,10 +257,8 @@ def NWTW(C, gamma):
             
     # return cost and path (from backtrace function)
     optcost = NW[-1, -1]
-    path, costs = backtrace_nwtw(NW, B)
-    path.reverse()
-    costs.reverse()
-    return optcost, np.array(path), np.array(costs)
+    path, costs = backtrace_nwtw(NW, B, C, gamma)
+    return optcost, path, costs
 
 
 
@@ -284,7 +282,7 @@ def backtrace_nwtw(NW, B, C, gamma):
         if r != B.shape[0] - 1:
             path.append([r, c])
             
-            if step == 4 or step == 5:
+            if B[r,c] == 4 or B[r,c] == 5:
                 costs.append(gamma)
             else:
                 costs.append(C[r, c])
@@ -339,13 +337,15 @@ def alignNW(featfile1, featfile2, downsample, gamma, outfile=None):
     
     # Run NWTW algorithm
     optcost, wp, costs = NWTW(C, gamma)
+    wp.reverse()
+    costs.reverse()
     
     # If output file is specified, save results
     if outfile:
 #         costs = []
 #         for element in wp:
 #             costs.append(C[element[0], element[1]])
-        d = {"wp": wp, "costs": costs}
+        d = {"wp": np.array(wp), "costs": np.array(costs)}
         pickle.dump(d, open(outfile, 'wb'))
     
     return wp
@@ -509,11 +509,10 @@ def backtrace_HPTW(D, B, steps, C, gamma):
         # Record row and column in path
         if plane == 0:
             path_h.append([row, col])
-            costs.append(gamma)
 #             planes_h.append(i)
         else:
             path_v.append([row, col])
-            costs.append(C[row, col])
+        costs.append(C[row, col])
 #             planes_v.append(i)
         total_path.append([row, col, plane])
 #         i += 1
@@ -550,11 +549,10 @@ def backtrace_HPTW(D, B, steps, C, gamma):
                 
     if plane == 0:
         path_h.append([row, col])
-        costs.append(gamma)
 #         planes_h.append(i)
     else:
         path_v.append([row, col])
-        costs.append(C[row, col])
+    costs.append(C[row, col])
 #         planes_v.append(i)
     total_path.append([row, col, plane])
                 
