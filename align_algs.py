@@ -270,7 +270,7 @@ def backtrace_nwtw(NW, B, C, gamma):
     # initialization
     r = B.shape[0] - 1
     c = B.shape[1] - 1
-    path = [[r, c]]
+    path = [[r, c, 1]]
     costs = [C[r,c]]
     steps = {1: (1, 1), 2: (1, 2), 3: (2, 1), 4: (1, 0), 5: (0, 1)}
     
@@ -280,12 +280,12 @@ def backtrace_nwtw(NW, B, C, gamma):
         r = r - step[0]
         c = c - step[1]
         if r != B.shape[0] - 1:
-            path.append([r, c])
+            costs.append(C[r,c])  # Impute from C either way
             
             if B[r,c] == 4 or B[r,c] == 5:
-                costs.append(gamma)
+                path.append([r,c,0]) # 0 for skip
             else:
-                costs.append(C[r, c])
+                path.append([r,c,1])  # 1 for 'match'
             
     return path, costs
 
